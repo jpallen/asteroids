@@ -85,12 +85,14 @@ require(["state"], function(State) {
     }).call(Network.prototype);
 
     var Graphics = function() {
-        this.canvas = document.getElementById("play_area").getContext("2d");
+        this.el = document.getElementById("play_area")
+        this.canvas = this.el.getContext("2d");
 
         var self = this;
         window.addEventListener("resize", function() {
             self.resize();
         })
+        this.resize();
 
         function renderAndSetTimeout() {
             self.render();
@@ -125,7 +127,7 @@ require(["state"], function(State) {
 
         this.clear = function() {
             this.canvas.fillStyle = "rgb(0,0,0)";
-            this.canvas.fillRect(0,0,1000,1000);
+            this.canvas.fillRect(0,0,this.el.width,this.el.height);
         };
 
         this.drawShip = function(position, rotation) {
@@ -190,8 +192,8 @@ require(["state"], function(State) {
         };
 
         this.resize = function() {
-            this.canvas.width = document.width;
-            this.canvas.height = document.height;
+            this.el.width = document.body.clientWidth;
+            this.el.height = document.body.clientHeight;
         };
     }).call(Graphics.prototype);
 
