@@ -25,6 +25,7 @@ define(function() {
             var shipIds     = [];
             var asteroidIds = [];
             var bulletIds   = [];
+            var deleteObjectIds = [];
 
             // Update object's positions and velocities
             for (id in this.objects) {
@@ -38,6 +39,11 @@ define(function() {
                 }
                 if (object.type == "bullet") {
                     bulletIds.push(id);
+                    
+                    // Bullets live for 10 seconds
+                    if ((new Date() - object.created) / 1000.0 > 10) {
+                        deleteObjectIds.push(id);
+                    }
                 }
 
                 if (object.position) {
@@ -75,7 +81,8 @@ define(function() {
                                     velocity : [
                                         -bulletVel * Math.sin(object.rotation) + object.velocity[0],
                                         bulletVel * Math.cos(object.rotation) + object.velocity[1]
-                                    ]
+                                    ],
+                                    created : new Date()
                                 }
 
                                 object.lastFired = new Date();
@@ -115,7 +122,7 @@ define(function() {
                     var dy = ship.position[1] - asteroid.position[1];
                     var distance = Math.sqrt(dx * dx + dy * dy);
                     if (distance < shipRadius + asteroidRadius) {
-                        delete this.objects[shipId];
+                        deleteObjectIds.push(shipId);
                     }
                 }
                 
@@ -129,10 +136,14 @@ define(function() {
                     var dy = bullet.position[1] - asteroid.position[1];
                     var distance = Math.sqrt(dx * dx + dy * dy);
                     if (distance < asteroidRadius) {
-                        delete this.objects[asteroidId];
-                        delete this.objects[bulletId];
+                        deleteObjectIds.push(asteroidId);
+                        deleteObjectIds.push(bulletId);
                     }
                 }
+            }
+
+            for(i = 0; i < deleteObjectIds.length; i++) {
+                delete this.objects[deleteObjectIds[i]];
             }
         },
 
