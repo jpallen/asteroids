@@ -70,6 +70,10 @@ require(["state"], function(State) {
                 for (objectId in clientObjects) {
                     if (typeof serverObjects[objectId] === "undefined") {
                         delete clientObjects[objectId];
+
+                        if (objectId == game.playerId) {
+                            delete game.playerId;
+                        }
                     }
                 }
             }
@@ -106,6 +110,56 @@ require(["state"], function(State) {
         this.render = function() {
             this.clear();
             
+            if (!this.lastRenderDate) {
+                this.lastRenderDate = new Date();
+                return;
+            }
+
+            var dt = (new Date() - this.lastRenderDate) / 1000.0;
+            this.lastRenderDate = new Date();
+
+            if (game.playerId && game.state.objects[game.playerId]) {
+                if (!this.playerSetViewPort) {
+                    this.viewPortCenter = game.state.objects[game.playerId].position;
+                    this.playerSetViewPort = true;
+                }
+
+                // Track player when they get close to the edge
+                var player = game.state.objects[game.playerId];
+                var startMoving = 300;
+                var boundary    = 100;
+                if ((player.position[0] - this.viewPortCenter[0] > (this.el.width / 2 - startMoving) ) && player.velocity[0] > 0) {
+                    var distanceFromBoundary = this.el.width / 2 - (player.position[0] - this.viewPortCenter[0]) - boundary;
+                    var rate = 1 - distanceFromBoundary / (startMoving - boundary);
+                    this.viewPortCenter[0] += rate * player.velocity[0] * dt;
+                }
+                if ((- player.position[0] + this.viewPortCenter[0] > (this.el.width / 2 - startMoving) ) && player.velocity[0] < 0) {
+                    var distanceFromBoundary = this.el.width / 2 - (- player.position[0] + this.viewPortCenter[0]) - boundary;
+                    var rate = 1 - distanceFromBoundary / (startMoving - boundary);
+                    this.viewPortCenter[0] += rate * player.velocity[0] * dt;
+                }
+                if ((player.position[1] - this.viewPortCenter[1] > (this.el.height / 2 - startMoving) ) && player.velocity[1] > 0) {
+                    var distanceFromBoundary = this.el.height / 2 - (player.position[1] - this.viewPortCenter[1]) - boundary;
+                    var rate = 1 - distanceFromBoundary / (startMoving - boundary);
+                    this.viewPortCenter[1] += rate * player.velocity[1] * dt;
+                }
+                if ((- player.position[1] + this.viewPortCenter[1] > (this.el.height / 2 - startMoving) ) && player.velocity[1] < 0) {
+                    var distanceFromBoundary = this.el.height / 2 - (- player.position[1] + this.viewPortCenter[1]) - boundary;
+                    var rate = 1 - distanceFromBoundary / (startMoving - boundary);
+                    this.viewPortCenter[1] += rate * player.velocity[1] * dt;
+                }
+            }
+
+            if (!this.viewPortCenter) {
+                this.viewPortCenter = [0, 0];
+            }
+
+            this.canvas.save();
+            this.canvas.translate(
+                -(this.viewPortCenter[0] - this.el.width / 2),
+                -(this.viewPortCenter[1] - this.el.height / 2)
+            );
+                
             for (id in game.state.objects) {
                 var object = game.state.objects[id];
 
@@ -123,6 +177,8 @@ require(["state"], function(State) {
                     }
                 }
             }
+
+            this.canvas.restore();
         };
 
         this.clear = function() {

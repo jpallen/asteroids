@@ -25,7 +25,7 @@ io.sockets.on("connection", function(socket) {
             type : "ship",
             position : [10,10],
             velocity : [0,0],
-            rotation : 0,
+            rotation : Math.PI,
             acceleration : [0,0]
         }
 
