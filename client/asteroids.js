@@ -6,11 +6,10 @@ require(["state"], function(State) {
             32 : "space",
             37 : "left",
             38 : "up",
-            39 : "right",
-            40 : "down"
+            39 : "right"
         };
 
-        var usedKeys = [32, 37, 38, 39, 40]
+        var usedKeys = [32, 37, 38, 39]
 
         this.pressedKeys = {};
 
@@ -94,10 +93,19 @@ require(["state"], function(State) {
                 var object = game.state.objects[id];
 
                 if (object.position && typeof object.rotation != "undefined") {
-                    this.drawShip(
-                        object.position,
-                        object.rotation
-                    );
+                    if (object.type == "ship") {
+                        this.drawShip(
+                            object.position,
+                            object.rotation
+                        );
+                    }
+
+                    if (object.type == "asteroid") {
+                        this.drawAsteroid(
+                            object.position,
+                            object.rotation
+                        );
+                    }
                 }
             }
         };
@@ -125,6 +133,35 @@ require(["state"], function(State) {
 
             this.canvas.restore();
         };
+
+        this.drawAsteroid = function(position, rotation) {
+            this.canvas.save();
+
+            this.canvas.strokeStyle = "rgb(255,255,255)";
+            this.canvas.lineWidth   = 2;
+
+            this.canvas.translate(position[0], position[1]);
+            this.canvas.rotate(rotation);
+            
+            var offsets = [2, -1, 1, -3, 1, 2, -1, 1, -2];
+
+            this.canvas.beginPath();
+            for (i = 0; i < offsets.length; i++) {
+                var r = 30 + offsets[i];
+                var x = r * Math.cos(2 * Math.PI * i / offsets.length);
+                var y = r * Math.sin(2 * Math.PI * i / offsets.length);
+
+                if (i == 0)
+                    this.canvas.moveTo(x,y);
+                else
+                    this.canvas.lineTo(x,y);
+            }
+            this.canvas.closePath();
+            this.canvas.stroke();
+
+            this.canvas.restore();
+
+        }
     }).call(Graphics.prototype);
 
     function initialise() {
