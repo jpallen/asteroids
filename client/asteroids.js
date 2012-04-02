@@ -41,26 +41,37 @@ require(["state"], function(State) {
 
         this.socket.on("set_player", function(data) {
             game.playerId = data.id;
-            self.updateObjectsFromServer(data.objects);
+            self.updateObjectsFromServer(data.objects, false);
             game.state.objects[data.id].playerInput = game.input.pressedKeys;
         })
     };
 
     (function() {
         this.resetStateFromServer = function(data) {
-            this.updateObjectsFromServer(data.objects);
+            this.updateObjectsFromServer(data.objects, true);
         };
 
-        this.updateObjectsFromServer = function(objects) {
+        this.updateObjectsFromServer = function(objects, removeUnmentioned) {
+            var clientObjects = game.state.objects;
+            var serverObjects = objects;
+
             for (objectId in objects) {
-                if (!game.state.objects[objectId]) {
-                    game.state.objects[objectId] = {}
+                if (!clientObjects[objectId]) {
+                    clientObjects[objectId] = {}
                 }
 
-                game.state.objects[objectId].position = objects[objectId].position;
-                game.state.objects[objectId].velocity = objects[objectId].velocity;
-                game.state.objects[objectId].rotation = objects[objectId].rotation;
-                game.state.objects[objectId].type     = objects[objectId].type;
+                clientObjects[objectId].position = serverObjects[objectId].position;
+                clientObjects[objectId].velocity = serverObjects[objectId].velocity;
+                clientObjects[objectId].rotation = serverObjects[objectId].rotation;
+                clientObjects[objectId].type     = serverObjects[objectId].type;
+            }
+
+            if (removeUnmentioned) {
+                for (objectId in clientObjects) {
+                    if (typeof serverObjects[objectId] === "undefined") {
+                        delete clientObjects[objectId];
+                    }
+                }
             }
         };
 
@@ -77,6 +88,10 @@ require(["state"], function(State) {
         this.canvas = document.getElementById("play_area").getContext("2d");
 
         var self = this;
+        window.addEventListener("resize", function() {
+            self.resize();
+        })
+
         function renderAndSetTimeout() {
             self.render();
             setTimeout(renderAndSetTimeout, 10);
@@ -94,17 +109,15 @@ require(["state"], function(State) {
 
                 if (object.position && typeof object.rotation != "undefined") {
                     if (object.type == "ship") {
-                        this.drawShip(
-                            object.position,
-                            object.rotation
-                        );
+                        this.drawShip(object.position,object.rotation);
                     }
 
                     if (object.type == "asteroid") {
-                        this.drawAsteroid(
-                            object.position,
-                            object.rotation
-                        );
+                        this.drawAsteroid(object.position,object.rotation);
+                    }
+
+                    if (object.type == "bullet") {
+                        this.drawBullet(object.position);
                     }
                 }
             }
@@ -161,7 +174,25 @@ require(["state"], function(State) {
 
             this.canvas.restore();
 
-        }
+        };
+
+        this.drawBullet = function(position) {
+            this.canvas.save();
+
+            this.canvas.strokeStyle = "rgb(255,255,255)";
+            this.canvas.lineWidth   = 2;
+
+            this.canvas.beginPath();
+            this.canvas.arc(position[0], position[1], 1, 0, 2 * Math.PI, true);
+            this.canvas.stroke();
+
+            this.canvas.restore();
+        };
+
+        this.resize = function() {
+            this.canvas.width = document.width;
+            this.canvas.height = document.height;
+        };
     }).call(Graphics.prototype);
 
     function initialise() {

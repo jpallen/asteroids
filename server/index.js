@@ -11,19 +11,13 @@ server.listen(8000);
 var io = IO.listen(server);
 
 var clients = {};
-var nextId = 0;
-
-function getNextId() {
-    return (nextId += 1);
-}
-
 
 requirejs(["../client/state"], function(State) {
 
 var state = new State();
 
 io.sockets.on("connection", function(socket) {
-    var id = getNextId();
+    var id = state.getNextId();
     
     socket.on("request_player", function() {
         clients[id] = socket;
@@ -77,7 +71,7 @@ var runTickAndSetTimeout = function() {
 
 runTickAndSetTimeout();
 
-state.objects[getNextId()] = {
+state.objects[state.getNextId()] = {
     type : "asteroid",
     position : [200, 200]
 }
