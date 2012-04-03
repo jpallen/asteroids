@@ -49,6 +49,7 @@ require(["state"], function(State) {
     (function() {
         this.resetStateFromServer = function(data) {
             this.updateObjectsFromServer(data.objects, true);
+            game.state.worldSize = data.worldSize;
         };
 
         this.updateObjectsFromServer = function(objects, removeUnmentioned) {
@@ -213,17 +214,17 @@ require(["state"], function(State) {
         this.getToroidalWorldPosition = function(position, reference) {
             tPosition = [position[0], position[1]];
 
-            if (reference[0] > 3 / 4 * game.state.size && position[0] < 1 / 4 * game.state.size) {
-                tPosition[0] += game.state.size;
+            if (reference[0] > 3 / 4 * game.state.worldSize[0] && position[0] < 1 / 4 * game.state.worldSize[0]) {
+                tPosition[0] += game.state.worldSize[0];
             }
-            if (reference[0] < 1 / 4  * game.state.size && position[0] > 3 / 4 * game.state.size) {
-                tPosition[0] -= game.state.size;
+            if (reference[0] < 1 / 4  * game.state.worldSize[0] && position[0] > 3 / 4 * game.state.worldSize[0]) {
+                tPosition[0] -= game.state.worldSize[0];
             }
-            if (reference[1] > 3 / 4 * game.state.size && position[1] < 1 / 4 * game.state.size) {
-                tPosition[1] += game.state.size;
+            if (reference[1] > 3 / 4 * game.state.worldSize[1] && position[1] < 1 / 4 * game.state.worldSize[1]) {
+                tPosition[1] += game.state.worldSize[1];
             }
-            if (reference[1] < 1 / 4 * game.state.size && position[1] > 3 / 4 * game.state.size) {
-                tPosition[1] -= game.state.size;
+            if (reference[1] < 1 / 4 * game.state.worldSize[1] && position[1] > 3 / 4 * game.state.worldSize[1]) {
+                tPosition[1] -= game.state.worldSize[1];
             }
 
             return tPosition;
@@ -302,7 +303,10 @@ require(["state"], function(State) {
     }).call(Graphics.prototype);
 
     function initialise() {
-        game.state    = new State(3000);
+        game.state    = new State({
+            performCollisions : false,
+            interval          : 10
+        });
         game.graphics = new Graphics();
         game.network  = new Network();
         game.input    = new Input();

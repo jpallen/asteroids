@@ -14,7 +14,10 @@ var clients = {};
 
 requirejs(["../client/state"], function(State) {
 
-var state = new State(3000);
+var state = new State({
+    performCollisions : true,
+    interval          : 50
+});
 
 io.sockets.on("connection", function(socket) {
     var id = state.getNextId();
@@ -23,7 +26,7 @@ io.sockets.on("connection", function(socket) {
         clients[id] = socket;
         player = {
             type : "ship",
-            position : [250,250],
+            position : [Math.random() * state.worldSize[0], Math.random() * state.worldSize[1]],
             velocity : [0,0],
             rotation : Math.PI,
             acceleration : [0,0]
@@ -56,7 +59,10 @@ io.sockets.on("connection", function(socket) {
 });
 
 var runTick = function() {
-    var data = { objects : state.objects };
+    var data = { 
+        worldSize : state.worldSize,
+        objects   : state.objects
+    };
     for (id in clients) {
         var client = clients[id];
         client.emit("tick", data);
@@ -70,12 +76,10 @@ var runTickAndSetTimeout = function() {
 
 runTickAndSetTimeout();
 
-state.performCollisions = true;
-
-for (var i = 0; i < state.size * state.size / (300 * 300); i++) {
+for (var i = 0; i < state.worldSize[0] * state.worldSize[1] / (300 * 300); i++) {
     state.objects[state.getNextId()] = {
         type : "asteroid",
-        position : [Math.random() * state.size, Math.random() * state.size],
+        position : [Math.random() * state.worldSize[0], Math.random() * state.worldSize[1]],
         velocity : [Math.random() * 30, Math.random() * 30],
         radius   : 32
     }

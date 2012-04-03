@@ -1,15 +1,18 @@
 define(function() {
-    var State = function(size) {
+    var State = function(options) {
         this.objects = {};
 
-        this.size = size;
+        options = options || {};
+        this.worldSize = options.worldSize || [500, 500];
+
+        this.performCollisions = !!options.performCollisions;
 
         this.nextId = 0;
 
         var self = this;
         function updateStateAndSetTimeout() {
             self.updateState();
-            setTimeout(updateStateAndSetTimeout, 10);
+            setTimeout(updateStateAndSetTimeout, options.interval || 10);
         }
         updateStateAndSetTimeout();
     };
@@ -107,24 +110,24 @@ define(function() {
                     object.velocity[0] += object.acceleration[0] * dt;
                     object.velocity[1] += object.acceleration[1] * dt;
 
-                    if (object.position[0] > this.size) {
-                        object.position[0] = object.position[0] - this.size;
+                    if (object.position[0] > this.worldSize[0]) {
+                        object.position[0] = object.position[0] - this.worldSize[0];
                     }
                     if (object.position[0] < 0) {
-                        object.position[0] = this.size + object.position[0];
+                        object.position[0] = this.worldSize[0] + object.position[0];
                     }
-                    if (object.position[1] > this.size) {
-                        object.position[1] = object.position[1] - this.size;
+                    if (object.position[1] > this.worldSize[1]) {
+                        object.position[1] = object.position[1] - this.worldSize[1];
                     }
                     if (object.position[1] < 0) {
-                        object.position[1] = this.size + object.position[1];
+                        object.position[1] = this.worldSize[1] + object.position[1];
                     }
                 }
             }
 
 
             // Do collision checking
-            if (this.performCollisions) {
+            //if (this.performCollisions) {
                 var shipRadius = 5;
                 for (var i = 0; i < asteroidIds.length; i++) {
                     var asteroidId = asteroidIds[i];
@@ -208,7 +211,7 @@ define(function() {
                     }
                     
                 }
-            }
+            //}
 
             // Remove any objects marked for deletion
             for(i = 0; i < deleteObjectIds.length; i++) {
