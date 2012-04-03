@@ -12,7 +12,12 @@ define(function() {
         var self = this;
         function updateStateAndSetTimeout() {
             self.updateState();
-            setTimeout(updateStateAndSetTimeout, options.interval || 10);
+            var interval = options.interval || 50;
+
+            if (self.lastStepTime) {
+                interval = Math.max(0, interval - self.lastStepTime);
+            }
+            setTimeout(updateStateAndSetTimeout, interval);
         }
         updateStateAndSetTimeout();
     };
@@ -52,7 +57,7 @@ define(function() {
                 return;
             }
 
-            var dt = (new Date() - this.lastTickDate) / 1000.0;
+            var dt = this.dt = (new Date() - this.lastTickDate) / 1000.0;
             this.lastTickDate = new Date();
 
             var deleteObjectIds = [];
@@ -70,29 +75,6 @@ define(function() {
             // Update object's positions and velocities
             for (id in this.objects) {
                 var object = this.objects[id];
-
-                // Put it into the correct region for collision checking
-                if (object.position) {
-                    var X = Math.floor(object.position[0] / this.regionWidth);
-                    var Y = Math.floor(object.position[1] / this.regionHeight);
-
-                    if (object.type == "ship") {
-                        this.regions[X][Y].shipIds.push(id);
-                    }
-                    if (object.type == "asteroid") {
-                        this.regions[X][Y].asteroidIds.push(id);
-                    }
-                    if (object.type == "bullet") {
-                        this.regions[X][Y].bulletIds.push(id);
-                        
-                        // Bullets live for 2 seconds
-                        if ((new Date() - object.created) / 1000.0 > 2) {
-                            deleteObjectIds.push(id);
-                        }
-                    }
-                    
-                }
-
 
                 if (object.position) {
                     if (!object.velocity)
@@ -164,6 +146,25 @@ define(function() {
                     }
                     if (object.position[1] < 0) {
                         object.position[1] = this.worldSize[1] + object.position[1];
+                    }
+
+                    // Sort objects into their regions
+                    var X = Math.floor(object.position[0] / this.regionWidth);
+                    var Y = Math.floor(object.position[1] / this.regionHeight);
+
+                    if (object.type == "ship") {
+                        this.regions[X][Y].shipIds.push(id);
+                    }
+                    if (object.type == "asteroid") {
+                        this.regions[X][Y].asteroidIds.push(id);
+                    }
+                    if (object.type == "bullet") {
+                        this.regions[X][Y].bulletIds.push(id);
+                        
+                        // Bullets live for 2 seconds
+                        if ((new Date() - object.created) / 1000.0 > 2) {
+                            deleteObjectIds.push(id);
+                        }
                     }
                 }
             }
@@ -267,12 +268,14 @@ define(function() {
 
             var timerC = (new Date() - timer);
 
-            console.log(timerA, timerB, timerA);
+            //console.log(dt, timerA, timerB, timerC);
 
             // Remove any objects marked for deletion
             for(i = 0; i < deleteObjectIds.length; i++) {
                 delete this.objects[deleteObjectIds[i]];
             }
+
+            this.lastStepTime = (new Date() - timer);
         },
 
         this.getNextId = function() {

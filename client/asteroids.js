@@ -120,7 +120,7 @@ require(["state"], function(State) {
                 return;
             }
 
-            var dt = (new Date() - this.lastRenderDate) / 1000.0;
+            var dt = this.dt = (new Date() - this.lastRenderDate) / 1000.0;
             this.lastRenderDate = new Date();
 
             if (game.playerId && game.state.objects[game.playerId]) {
