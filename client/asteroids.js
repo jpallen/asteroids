@@ -105,7 +105,7 @@ require(["state"], function(State) {
 
         function renderAndSetTimeout() {
             self.render();
-            setTimeout(renderAndSetTimeout, 10);
+            setTimeout(renderAndSetTimeout, 25);
         }
 
         renderAndSetTimeout();
@@ -305,7 +305,7 @@ require(["state"], function(State) {
     function initialise() {
         game.state    = new State({
             performCollisions : false,
-            interval          : 10
+            interval          : 25
         });
         game.graphics = new Graphics();
         game.network  = new Network();

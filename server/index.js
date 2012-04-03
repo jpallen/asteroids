@@ -17,7 +17,7 @@ requirejs(["../client/state"], function(State) {
 var state = new State({
     performCollisions : true,
     interval          : 50,
-    worldSize         : [10000, 10000]
+    worldSize         : [3000, 3000]
 });
 
 io.sockets.on("connection", function(socket) {
@@ -60,12 +60,56 @@ io.sockets.on("connection", function(socket) {
 });
 
 var runTick = function() {
-    var data = { 
-        worldSize : state.worldSize,
-        objects   : state.objects
-    };
     for (id in clients) {
         var client = clients[id];
+        var data = { 
+            worldSize : state.worldSize,
+            objects   : {}
+        };
+       
+        if (state.objects[id]) {
+            var centerRegion = state.objects[id].region
+
+            console.log(centerRegion);
+
+            if (centerRegion && state.regions) {
+                var regions = [
+                    [ centerRegion[0],     centerRegion[1]     ],
+                    [ centerRegion[0] - 1, centerRegion[1]     ],
+                    [ centerRegion[0] - 1, centerRegion[1] - 1 ],
+                    [ centerRegion[0],     centerRegion[1] - 1 ],
+                    [ centerRegion[0] + 1, centerRegion[1] - 1 ],
+                    [ centerRegion[0] + 1, centerRegion[1]     ],
+                    [ centerRegion[0] + 1, centerRegion[1] + 1 ],
+                    [ centerRegion[0],     centerRegion[1] + 1 ],
+                    [ centerRegion[0] - 1, centerRegion[1] + 1 ]
+                ];
+
+                for (var i = 0; i < regions.length; i++) {
+                    region = regions[i];
+
+                    // Wrap regions is necessary
+                    if (region[0] < 0) region[0] = state.noOfHorizontalRegions - 1;
+                    if (region[0] > state.noOfHorizontalRegions - 1) region[0] = 0;
+
+                    if (region[1] < 0) region[1] = state.noOfVerticalRegions - 1;
+                    if (region[1] > state.noOfVerticalRegions - 1) region[1] = 0;
+
+                    region = state.regions[region[0]][region[1]];
+
+                    for (var j = 0; j < region.shipIds.length; j++) {
+                        data.objects[region.shipIds[j]] = state.objects[region.shipIds[j]];
+                    }
+                    for (var j = 0; j < region.bulletIds.length; j++) {
+                        data.objects[region.bulletIds[j]] = state.objects[region.bulletIds[j]];
+                    }
+                    for (var j = 0; j < region.asteroidIds.length; j++) {
+                        data.objects[region.asteroidIds[j]] = state.objects[region.asteroidIds[j]];
+                    }
+                }
+            }
+        }
+
         client.emit("tick", data);
     }
 }
@@ -77,27 +121,12 @@ var runTickAndSetTimeout = function() {
 
 runTickAndSetTimeout();
 
-//for (var i = 0; i < state.worldSize[0] * state.worldSize[1] / (300 * 300); i++) {
-for (var i = 0; i < 1000; i++) {
+for (var i = 0; i < state.worldSize[0] * state.worldSize[1] / (200 * 200); i++) {
     state.objects[state.getNextId()] = {
         type : "asteroid",
         position : [Math.random() * state.worldSize[0], Math.random() * state.worldSize[1]],
         velocity : [Math.random() * 30, Math.random() * 30],
         radius   : 32
-    }
-}
-for (var i = 0; i < 1000; i++) {
-    state.objects[state.getNextId()] = {
-        type : "ship",
-        position : [Math.random() * state.worldSize[0], Math.random() * state.worldSize[1]],
-        velocity : [Math.random() * 30, Math.random() * 30]
-    }
-}
-for (var i = 0; i < 10000; i++) {
-    state.objects[state.getNextId()] = {
-        type : "bullet",
-        position : [Math.random() * state.worldSize[0], Math.random() * state.worldSize[1]],
-        velocity : [Math.random() * 100, Math.random() * 100]
     }
 }
 

@@ -62,13 +62,15 @@ define(function() {
 
             var deleteObjectIds = [];
 
-            this.regionWidth = 300;
-            this.regionHeight = 300;
+            this.regionWidth = 600;
+            this.regionHeight = 600;
 
             this.noOfHorizontalRegions = Math.ceil(this.worldSize[0] / this.regionWidth);
             this.noOfVerticalRegions = Math.ceil(this.worldSize[1] / this.regionHeight);
 
-            this.clearRegions();
+            if (this.performCollisions) {
+                this.clearRegions();
+            }
 
             var timerA = (new Date() - timer);
 
@@ -147,23 +149,33 @@ define(function() {
                     if (object.position[1] < 0) {
                         object.position[1] = this.worldSize[1] + object.position[1];
                     }
-
-                    // Sort objects into their regions
-                    var X = Math.floor(object.position[0] / this.regionWidth);
-                    var Y = Math.floor(object.position[1] / this.regionHeight);
-
-                    if (object.type == "ship") {
-                        this.regions[X][Y].shipIds.push(id);
-                    }
-                    if (object.type == "asteroid") {
-                        this.regions[X][Y].asteroidIds.push(id);
-                    }
+                    
+                    // Bullets live for 2 seconds
                     if (object.type == "bullet") {
-                        this.regions[X][Y].bulletIds.push(id);
-                        
-                        // Bullets live for 2 seconds
                         if ((new Date() - object.created) / 1000.0 > 2) {
                             deleteObjectIds.push(id);
+                        }
+                    }
+
+                    // Sort objects into their regions
+                    if (this.performCollisions) {
+                        var X = Math.floor(object.position[0] / this.regionWidth);
+                        var Y = Math.floor(object.position[1] / this.regionHeight);
+
+                        if (object.type == "ship") {
+                            this.regions[X][Y].shipIds.push(id);
+                            object.region = [X, Y];
+                        }
+                        if (object.type == "asteroid") {
+                            this.regions[X][Y].asteroidIds.push(id);
+                        }
+                        if (object.type == "bullet") {
+                            this.regions[X][Y].bulletIds.push(id);
+                            
+                            // Bullets live for 2 seconds
+                            if ((new Date() - object.created) / 1000.0 > 2) {
+                                deleteObjectIds.push(id);
+                            }
                         }
                     }
                 }
@@ -257,7 +269,7 @@ define(function() {
                             var dx = ship.position[0] - bullet.position[0];
                             var dy = ship.position[1] - bullet.position[1];
                             var distance = Math.sqrt(dx * dx + dy * dy);
-                            if (distance < shipRadius && (new Date() - bullet.created) > 200) {
+                            if (distance < 15 && (new Date() - bullet.created) > 200) {
                                 deleteObjectIds.push(shipId);
                             }
                         }
