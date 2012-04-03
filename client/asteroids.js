@@ -64,6 +64,10 @@ require(["state"], function(State) {
                 clientObjects[objectId].velocity = serverObjects[objectId].velocity;
                 clientObjects[objectId].rotation = serverObjects[objectId].rotation;
                 clientObjects[objectId].type     = serverObjects[objectId].type;
+                
+                if (typeof serverObjects[objectId].radius != "undefined") {
+                    clientObjects[objectId].radius = serverObjects[objectId].radius;
+                }
             }
 
             if (removeUnmentioned) {
@@ -126,8 +130,9 @@ require(["state"], function(State) {
 
                 // Track player when they get close to the edge
                 var player = game.state.objects[game.playerId];
-                var startMoving = 300;
-                var boundary    = 100;
+                var startMoving = Math.min(this.el.width, this.el.height) * 0.5;
+                var boundary = Math.min(this.el.width, this.el.height) * 0.3;
+
                 if ((player.position[0] - this.viewPortCenter[0] > (this.el.width / 2 - startMoving) ) && player.velocity[0] > 0) {
                     var distanceFromBoundary = this.el.width / 2 - (player.position[0] - this.viewPortCenter[0]) - boundary;
                     var rate = 1 - distanceFromBoundary / (startMoving - boundary);
@@ -148,6 +153,25 @@ require(["state"], function(State) {
                     var rate = 1 - distanceFromBoundary / (startMoving - boundary);
                     this.viewPortCenter[1] += rate * player.velocity[1] * dt;
                 }
+
+                // This is a bit hacky, but if the player seems to have jumped a long way they've
+                // probably wrapped around the world, so we'd better move the view port back to them
+                if (this.previousPlayerPosition) {
+                    if (player.position[0] - this.previousPlayerPosition[0] > 10) {
+                        this.viewPortCenter[0] += player.position[0] - this.previousPlayerPosition[0];
+                    }
+                    if (player.position[0] - this.previousPlayerPosition[0] < -10) {
+                        this.viewPortCenter[0] += player.position[0] - this.previousPlayerPosition[0];
+                    }
+                    if (player.position[1] - this.previousPlayerPosition[1] > 10) {
+                        this.viewPortCenter[1] += player.position[1] - this.previousPlayerPosition[1];
+                    }
+                    if (player.position[1] - this.previousPlayerPosition[1] < -10) {
+                        this.viewPortCenter[1] += player.position[1] - this.previousPlayerPosition[1];
+                    }
+                }
+                
+                this.previousPlayerPosition = [player.position[0], player.position[1]];
             }
 
             if (!this.viewPortCenter) {
@@ -159,26 +183,50 @@ require(["state"], function(State) {
                 -(this.viewPortCenter[0] - this.el.width / 2),
                 -(this.viewPortCenter[1] - this.el.height / 2)
             );
-                
+            
+            var centerPosition = this.viewPortCenter;
+            if (game.playerId && game.state.objects[game.playerId]) {
+                centerPosition = game.state.objects[game.playerId].position;
+            }
+            
             for (id in game.state.objects) {
                 var object = game.state.objects[id];
 
                 if (object.position && typeof object.rotation != "undefined") {
                     if (object.type == "ship") {
-                        this.drawShip(object.position,object.rotation);
+                        this.drawShip(this.getToroidalWorldPosition(object.position, centerPosition), object.rotation);
                     }
 
                     if (object.type == "asteroid") {
-                        this.drawAsteroid(object.position,object.rotation);
+                        this.drawAsteroid(this.getToroidalWorldPosition(object.position, centerPosition), object.rotation, object.radius);
                     }
 
                     if (object.type == "bullet") {
-                        this.drawBullet(object.position);
+                        this.drawBullet(this.getToroidalWorldPosition(object.position, centerPosition));
                     }
                 }
             }
 
             this.canvas.restore();
+        };
+
+        this.getToroidalWorldPosition = function(position, reference) {
+            tPosition = [position[0], position[1]];
+
+            if (reference[0] > 3 / 4 * game.state.size && position[0] < 1 / 4 * game.state.size) {
+                tPosition[0] += game.state.size;
+            }
+            if (reference[0] < 1 / 4  * game.state.size && position[0] > 3 / 4 * game.state.size) {
+                tPosition[0] -= game.state.size;
+            }
+            if (reference[1] > 3 / 4 * game.state.size && position[1] < 1 / 4 * game.state.size) {
+                tPosition[1] += game.state.size;
+            }
+            if (reference[1] < 1 / 4 * game.state.size && position[1] > 3 / 4 * game.state.size) {
+                tPosition[1] -= game.state.size;
+            }
+
+            return tPosition;
         };
 
         this.clear = function() {
@@ -205,7 +253,7 @@ require(["state"], function(State) {
             this.canvas.restore();
         };
 
-        this.drawAsteroid = function(position, rotation) {
+        this.drawAsteroid = function(position, rotation, radius) {
             this.canvas.save();
 
             this.canvas.strokeStyle = "rgb(255,255,255)";
@@ -218,7 +266,7 @@ require(["state"], function(State) {
 
             this.canvas.beginPath();
             for (i = 0; i < offsets.length; i++) {
-                var r = 30 + offsets[i];
+                var r = radius + offsets[i];
                 var x = r * Math.cos(2 * Math.PI * i / offsets.length);
                 var y = r * Math.sin(2 * Math.PI * i / offsets.length);
 
@@ -254,7 +302,7 @@ require(["state"], function(State) {
     }).call(Graphics.prototype);
 
     function initialise() {
-        game.state    = new State();
+        game.state    = new State(3000);
         game.graphics = new Graphics();
         game.network  = new Network();
         game.input    = new Input();

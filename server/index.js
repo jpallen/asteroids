@@ -14,7 +14,7 @@ var clients = {};
 
 requirejs(["../client/state"], function(State) {
 
-var state = new State();
+var state = new State(3000);
 
 io.sockets.on("connection", function(socket) {
     var id = state.getNextId();
@@ -23,7 +23,7 @@ io.sockets.on("connection", function(socket) {
         clients[id] = socket;
         player = {
             type : "ship",
-            position : [10,10],
+            position : [250,250],
             velocity : [0,0],
             rotation : Math.PI,
             acceleration : [0,0]
@@ -45,7 +45,6 @@ io.sockets.on("connection", function(socket) {
         if (state.objects[id]) {
             state.objects[id].playerInput = data;
         }
-        console.log(data);
     });
 
     socket.on("disconnect", function() {
@@ -66,14 +65,20 @@ var runTick = function() {
 
 var runTickAndSetTimeout = function() {
     runTick();
-    setTimeout(runTickAndSetTimeout, 100);
+    setTimeout(runTickAndSetTimeout, 50);
 }
 
 runTickAndSetTimeout();
 
-state.objects[state.getNextId()] = {
-    type : "asteroid",
-    position : [200, 200]
+state.performCollisions = true;
+
+for (var i = 0; i < state.size * state.size / (300 * 300); i++) {
+    state.objects[state.getNextId()] = {
+        type : "asteroid",
+        position : [Math.random() * state.size, Math.random() * state.size],
+        velocity : [Math.random() * 30, Math.random() * 30],
+        radius   : 32
+    }
 }
 
 });

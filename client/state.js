@@ -1,6 +1,8 @@
 define(function() {
-    var State = function() {
+    var State = function(size) {
         this.objects = {};
+
+        this.size = size;
 
         this.nextId = 0;
 
@@ -40,8 +42,8 @@ define(function() {
                 if (object.type == "bullet") {
                     bulletIds.push(id);
                     
-                    // Bullets live for 10 seconds
-                    if ((new Date() - object.created) / 1000.0 > 10) {
+                    // Bullets live for 2 seconds
+                    if ((new Date() - object.created) / 1000.0 > 2) {
                         deleteObjectIds.push(id);
                     }
                 }
@@ -56,14 +58,14 @@ define(function() {
 
                     if (object.playerInput) {
                         if (object.playerInput["left"]) {
-                            object.rotation -= 4 * dt;
+                            object.rotation -= 8 * dt;
                         }
                         if (object.playerInput["right"]) {
-                            object.rotation += 4 * dt;
+                            object.rotation += 8 * dt;
                         }
 
                         if (object.playerInput["up"]) {
-                            var rate = 170.0
+                            var rate = 250.0
                             object.acceleration = [
                                 -rate * Math.sin(object.rotation),
                                 rate * Math.cos(object.rotation)
@@ -73,11 +75,14 @@ define(function() {
                         }
 
                         if (object.playerInput["space"]) {
-                            if (!object.lastFired || (new Date() - object.lastFired) > 500) {
+                            if (!object.lastFired || (new Date() - object.lastFired) > 250) {
                                 var bulletVel = 250;
                                 this.objects[this.getNextId()] = {
                                     type : "bullet",
-                                    position : [object.position[0], object.position[1]],
+                                    position : [
+                                        object.position[0],
+                                        object.position[1]
+                                    ],
                                     velocity : [
                                         -bulletVel * Math.sin(object.rotation) + object.velocity[0],
                                         bulletVel * Math.cos(object.rotation) + object.velocity[1]
@@ -90,7 +95,7 @@ define(function() {
                         }
                     }
                    
-                    if (object.type == "ship" || object.type == "asteroid") {
+                    if (object.type == "ship") {
                         var damping = 0.3; 
                         object.acceleration[0] += - damping * object.velocity[0];
                         object.acceleration[1] += - damping * object.velocity[1];
@@ -101,47 +106,111 @@ define(function() {
 
                     object.velocity[0] += object.acceleration[0] * dt;
                     object.velocity[1] += object.acceleration[1] * dt;
+
+                    if (object.position[0] > this.size) {
+                        object.position[0] = object.position[0] - this.size;
+                    }
+                    if (object.position[0] < 0) {
+                        object.position[0] = this.size + object.position[0];
+                    }
+                    if (object.position[1] > this.size) {
+                        object.position[1] = object.position[1] - this.size;
+                    }
+                    if (object.position[1] < 0) {
+                        object.position[1] = this.size + object.position[1];
+                    }
                 }
             }
 
 
             // Do collision checking
-            var shipRadius = 5;
-            var asteroidRadius = 30;
-            for (var i = 0; i < asteroidIds.length; i++) {
-                var asteroidId = asteroidIds[i];
-                var asteroid = this.objects[asteroidId];
-               
-                // Ships hitting asteroids
-                for (var j = 0; j < shipIds.length; j++) {
-                    var shipId = shipIds[j];
+            if (this.performCollisions) {
+                var shipRadius = 5;
+                for (var i = 0; i < asteroidIds.length; i++) {
+                    var asteroidId = asteroidIds[i];
+                    var asteroid = this.objects[asteroidId];
+                   
+                    // Ships hitting asteroids
+                    for (var j = 0; j < shipIds.length; j++) {
+                        var shipId = shipIds[j];
 
-                    var ship = this.objects[shipId];
+                        var ship = this.objects[shipId];
 
-                    var dx = ship.position[0] - asteroid.position[0];
-                    var dy = ship.position[1] - asteroid.position[1];
-                    var distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < shipRadius + asteroidRadius) {
-                        deleteObjectIds.push(shipId);
+                        var dx = ship.position[0] - asteroid.position[0];
+                        var dy = ship.position[1] - asteroid.position[1];
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < (shipRadius + asteroid.radius)) {
+                            deleteObjectIds.push(shipId);
+                        }
+                    }
+                    
+                    // Bullets hitting asteroids
+                    for (j = 0; j < bulletIds.length; j++) {
+                        var bulletId = bulletIds[j];
+
+                        var bullet = this.objects[bulletId];
+
+                        var dx = bullet.position[0] - asteroid.position[0];
+                        var dy = bullet.position[1] - asteroid.position[1];
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < asteroid.radius) {
+                            deleteObjectIds.push(asteroidId);
+                            deleteObjectIds.push(bulletId);
+
+                            // Create two smaller asteroids
+                            if (asteroid.radius > 8) {
+                                // Separate orthogonal to bullet impact normal.
+                                var asteroid1 = this.objects[this.getNextId()] = {
+                                    radius : asteroid.radius / 2,
+                                    position : [
+                                        asteroid.position[0] + dy,
+                                        asteroid.position[1] - dx
+                                    ],
+                                    velocity : [
+                                        asteroid.velocity[0] + (bullet.velocity[0] / 5) + dy / 2,
+                                        asteroid.velocity[1] + (bullet.velocity[1] / 5) - dx / 2
+                                    ],
+                                    type : "asteroid"
+                                }
+                                var asteroid2 = this.objects[this.getNextId()] = {
+                                    radius : asteroid.radius / 2,
+                                    position : [
+                                        asteroid.position[0] - dy / 2,
+                                        asteroid.position[1] + dx / 2
+                                    ],
+                                    velocity : [
+                                        asteroid.velocity[0] + bullet.velocity[0] / 5 - dy,
+                                        asteroid.velocity[1] + bullet.velocity[1] / 5 + dx
+                                    ],
+                                    type : "asteroid"
+                                }
+                            }
+                        }
                     }
                 }
-                
-                // Bullets hitting asteroids
-                for (j = 0; j < bulletIds.length; j++) {
-                    var bulletId = bulletIds[j];
 
-                    var bullet = this.objects[bulletId];
+                for(i = 0; i < shipIds.length; i++) {
+                    var shipId = shipIds[i];
+                    var ship = this.objects[shipId];
 
-                    var dx = bullet.position[0] - asteroid.position[0];
-                    var dy = bullet.position[1] - asteroid.position[1];
-                    var distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < asteroidRadius) {
-                        deleteObjectIds.push(asteroidId);
-                        deleteObjectIds.push(bulletId);
+                    for (j = 0; j < bulletIds.length; j++) {
+                        var bulletId = bulletIds[j];
+
+                        var bullet = this.objects[bulletId];
+
+                        var dx = ship.position[0] - bullet.position[0];
+                        var dy = ship.position[1] - bullet.position[1];
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < shipRadius && (new Date() - bullet.created) > 200) {
+                            deleteObjectIds.push(shipId);
+                        }
                     }
+                    
                 }
             }
 
+            // Remove any objects marked for deletion
             for(i = 0; i < deleteObjectIds.length; i++) {
                 delete this.objects[deleteObjectIds[i]];
             }
