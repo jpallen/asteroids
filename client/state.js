@@ -267,6 +267,8 @@ define(function() {
 
             var timerC = (new Date() - timer);
 
+            console.log(timerA, timerB, timerA);
+
             // Remove any objects marked for deletion
             for(i = 0; i < deleteObjectIds.length; i++) {
                 delete this.objects[deleteObjectIds[i]];
